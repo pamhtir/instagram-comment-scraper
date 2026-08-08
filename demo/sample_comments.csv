@@ -1,0 +1,4 @@
+platform,content_type,source_url,comment_id,username,comment,is_reply,parent_username,scraped_at_utc
+instagram,reel,https://www.instagram.com/reel/DEMO/,sample001,customer.one,The tutorial was clear and useful.,False,,2026-08-08T08:00:00+00:00
+instagram,reel,https://www.instagram.com/reel/DEMO/,sample002,customer.two,Could you share the next part?,False,,2026-08-08T08:00:01+00:00
+instagram,reel,https://www.instagram.com/reel/DEMO/,sample003,customer.three,Great example — thank you!,False,,2026-08-08T08:00:02+00:00
