@@ -11,7 +11,7 @@ def main() -> int:
     version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     in_venv = sys.prefix != getattr(sys, "base_prefix", sys.prefix)
     supported = (3, 11) <= sys.version_info[:2] < (3, 14)
-    required = ("pandas", "selenium", "openpyxl", "dotenv", "pytest")
+    required = ("pandas", "selenium", "openpyxl", "dotenv", "pytest", "requests")
     missing = [name for name in required if importlib.util.find_spec(name) is None]
 
     print(f"Python: {version}")

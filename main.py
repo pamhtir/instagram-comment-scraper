@@ -33,6 +33,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=None, help="Output filename stem")
     parser.add_argument("--headless", action="store_true", help="Run Chrome without a visible window (after login is established)")
     parser.add_argument("--no-replies", action="store_true", help="Skip reply expansion for a faster run")
+    parser.add_argument("--engine", choices=["auto", "http", "browser"], default="auto", help="HTTP first, HTTP only, or Selenium browser only")
     parser.add_argument("--log-level", choices=["DEBUG", "INFO", "WARNING", "ERROR"], default="INFO")
     args = parser.parse_args(argv)
     if not 1 <= args.max_loads <= 500:
@@ -65,13 +66,21 @@ def main(argv: list[str] | None = None) -> int:
     raw_output = Path("data/raw") / f"instagram_comments_raw_{run_id}.jsonl"
     try:
         settings = Settings.from_env()
-        raw = InstagramScraper(settings, headless=args.headless, replies=not args.no_replies).scrape(
+        run = InstagramScraper(settings, headless=args.headless, replies=not args.no_replies, engine=args.engine).run(
             args.url, args.max_loads, args.max_comments
         )
+        raw = run.records
         raw_path = export_raw_records(raw, raw_output)
         cleaned, metrics = clean_comments(raw)
-        csv_path, xlsx_path = export_results(cleaned, metrics, output)
+        run_metrics = run.metrics.to_dict()
+        # The cleaner is the final authority for delivery-valid invalid/duplicate totals.
+        run_metrics.update({
+            "raw_records": metrics["raw"], "invalid_records": metrics["invalid"],
+            "duplicate_records": metrics["duplicates"], "unique_records": metrics["final"],
+        })
+        csv_path, xlsx_path = export_results(cleaned, metrics, output, run_metrics)
         logger.info("Complete | raw=%d invalid=%d duplicates=%d final=%d", metrics["raw"], metrics["invalid"], metrics["duplicates"], metrics["final"])
+        logger.info("Run metrics | %s", run_metrics)
         logger.info("Raw: %s", raw_path)
         logger.info("CSV: %s", csv_path)
         logger.info("Excel: %s", xlsx_path)

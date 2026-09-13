@@ -31,16 +31,27 @@ def export_raw_records(records: Iterable[Any], output_path: Path) -> Path:
     return output_path
 
 
-def export_results(df: pd.DataFrame, metrics: dict[str, int], output_stem: Path) -> tuple[Path, Path]:
+def export_results(
+    df: pd.DataFrame, metrics: dict[str, int], output_stem: Path, run_metrics: dict | None = None,
+) -> tuple[Path, Path]:
     output_stem.parent.mkdir(parents=True, exist_ok=True)
     csv_path, xlsx_path = output_stem.with_suffix(".csv"), output_stem.with_suffix(".xlsx")
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     unique_users = int(df["username"].nunique()) if "username" in df else 0
     replies = int(df["is_reply"].fillna(False).astype(bool).sum()) if "is_reply" in df else 0
-    summary = pd.DataFrame({
+    summary_data = {
         "Metric": ["Raw records", "Invalid records", "Duplicates removed", "Final comments", "Unique users", "Replies"],
         "Value": [metrics["raw"], metrics["invalid"], metrics["duplicates"], metrics["final"], unique_users, replies],
-    })
+    }
+    if run_metrics:
+        summary_data["Metric"].extend([
+            "Requested comments", "Engine used", "Retry count", "Stop reason", "Elapsed seconds", "Comments per second",
+        ])
+        summary_data["Value"].extend([
+            run_metrics.get("requested_comments") or "", run_metrics.get("engine_used", ""), run_metrics.get("retry_count", 0),
+            run_metrics.get("stop_reason", ""), run_metrics.get("elapsed_seconds", 0), run_metrics.get("comments_per_second", 0),
+        ])
+    summary = pd.DataFrame(summary_data)
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as writer:
         summary.to_excel(writer, sheet_name="Summary", index=False, startrow=3)
         df.to_excel(writer, sheet_name="Comments", index=False)

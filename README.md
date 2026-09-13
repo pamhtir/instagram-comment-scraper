@@ -2,7 +2,7 @@
 
 [![Tests](https://img.shields.io/badge/tests-30%2B_pass-brightgreen)](#quality-assurance) [![Python](https://img.shields.io/badge/Python-3.11--3.13-blue)](https://www.python.org/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A portfolio-grade Python workflow that collects comments visibly loaded from an authorized Instagram Post or Reel, validates and deduplicates the records, and creates client-ready UTF-8 CSV and formatted Excel reports.
+A portfolio-grade Python workflow with a bounded HTTP-first prototype and an authorized-browser fallback. It validates and deduplicates the records, then creates client-ready UTF-8 CSV and formatted Excel reports.
 
 > Honest scope: this tool collects comments visible to the authenticated browser session. It does not bypass private accounts, CAPTCHAs, verification, rate limits, or platform access controls, and it cannot guarantee every comment.
 
@@ -23,6 +23,8 @@ The project demonstrates browser automation, defensive extraction, multilingual 
 ## Key features
 
 - Supports canonical Instagram `/p/` and `/reel/` URLs.
+- Uses `--engine auto` to try a free ordinary HTTP pagination path first, then falls back to the authorized Selenium browser only when Instagram clearly blocks that HTTP path. Use `--engine http` to test the prototype without browser fallback, or `--engine browser` to retain browser-only behavior.
+- Records requested count, raw/unique/invalid/duplicate records, elapsed time, comments/second, engine, retries, and stop reason in the log and Excel summary.
 - Repairs accidentally pasted Markdown links such as `[URL](URL)`, while the documented command always uses a plain URL.
 - Uses a dedicated local Chrome profile; credentials are never stored in code.
 - Opens Reel comment dialogs and detects inline Post comments.
@@ -57,6 +59,18 @@ Edit `IG_PROFILE_DIR` in `.env`. On the first visible run, sign in manually in t
 python main.py --url "https://www.instagram.com/reel/SHORTCODE/" --max-loads 30 --max-comments 500
 python main.py --url "https://www.instagram.com/p/SHORTCODE/" --max-loads 30
 ```
+
+## Real benchmark (bounded and honest)
+
+Run one attempt per staged target; it writes a timestamped JSON result under `data/benchmarks/`. It does not use paid services and does not retry until it forces a result. Start with `--engine http` to establish whether the available HTTP route is accessible in your environment.
+
+```bash
+python scripts/benchmark.py --url "https://www.instagram.com/p/SHORTCODE/" --engine http --targets 100 500 1000 2500 5000 --max-pages 100
+```
+
+If the result says `blocked` (for example HTTP 401/403/429 or no exposed media identifier), that is platform evidence, not a reason to add stealth, CAPTCHA bypass, paid proxies, or paid scraping services. A browser benchmark may still be run separately with `--engine browser`, using an operator-authorized session.
+
+See [`docs/http-prototype-status.md`](docs/http-prototype-status.md) for the current live-validation boundary and the next architecture decision if HTTP is blocked.
 
 Fast mode without reply expansion:
 
@@ -94,7 +108,10 @@ social-media-comment-scraper/
 ├── scripts/check_environment.py
 ├── scripts/smoke_test.py
 ├── src/
-│   ├── scrapers/instagram.py
+│   ├── scrapers/instagram.py          # retained Selenium implementation
+│   ├── scrapers/instagram_browser.py  # browser engine adapter
+│   ├── scrapers/instagram_http.py     # bounded HTTP prototype
+│   └── scrapers/instagram_base.py      # shared engine contract and metrics
 │   ├── cleaners.py
 │   ├── config.py
 │   ├── exporters.py
